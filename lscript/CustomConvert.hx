@@ -4,10 +4,10 @@ import cpp.RawPointer;
 import lscript.LScript;
 import lscript.ClassWorkarounds;
 
-import llua.Lua;
-import llua.LuaL;
-import llua.State;
-import llua.Macro.*;
+import luau.Lua;
+import luau.LuaL;
+import luau.State;
+import luau.Macro.*;
 
 class CustomConvert {
 	/**

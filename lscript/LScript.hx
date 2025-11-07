@@ -2,11 +2,13 @@ package lscript;
 
 import lscript.*;
 
-import llua.Lua;
-import llua.LuaL;
-import llua.State;
-import llua.LuaOpen;
+// Switch to Luau-compatible wrappers
+import luau.Lua;
+import luau.LuaL;
+import luau.State;
+import luau.LuaOpen;
 
+import hxluau.Types;
 import cpp.Callable;
 import cpp.RawPointer;
 
@@ -33,7 +35,7 @@ class LScript {
 	
 	public static var GlobalVars:Map<String, Dynamic> = new Map<String, Dynamic>();
 
-	public var luaState:State;
+    public var luaState:State;
 	public var tracePrefix:String = "testScript: ";
 	public var parent(get, set):Dynamic;
 	public var script(get, null):Dynamic;
@@ -59,8 +61,8 @@ class LScript {
 		}
 		this.unsafe = unsafe;
 		
-		Lua.register_hxtrace_func(Callable.fromStaticFunction(scriptTrace));
-		Lua.register_hxtrace_lib(luaState);
+        // Override global print to route through Haxe and include optional context
+        Lua.register(luaState, "print", cpp.Callable.fromStaticFunction(printTrace));
 
 		Lua.newtable(luaState);
 		final tableIndex = Lua.gettop(luaState); //The variable position of the table. Used for paring the metatable with this table.
@@ -71,21 +73,21 @@ class LScript {
 		Lua.pushvalue(luaState, metatableIndex);
 		Lua.setglobal(luaState, "__scriptMetatable");
 
-		Lua.pushstring(luaState, '__index'); //This is a function in the metatable that is called when you to get a var that doesn't exist.
-		Lua.pushcfunction(luaState, MetatableFunctions.callIndex);
-		Lua.settable(luaState, metatableIndex);
-		
-		Lua.pushstring(luaState, '__newindex'); //This is a function in the metatable that is called when you to set a var that was originally null.
-		Lua.pushcfunction(luaState, MetatableFunctions.callNewIndex);
-		Lua.settable(luaState, metatableIndex);
-		
-		Lua.pushstring(luaState, '__call'); //This is a function in the metatable that is called when you call a function inside the table.
-		Lua.pushcfunction(luaState, MetatableFunctions.callMetatableCall);
-		Lua.settable(luaState, metatableIndex);
+        Lua.pushstring(luaState, '__index'); // called on missing property access
+        Lua.pushcfunction(luaState, MetatableFunctions.callIndex, "__index");
+        Lua.settable(luaState, metatableIndex);
+        
+        Lua.pushstring(luaState, '__newindex'); // called on setting missing property
+        Lua.pushcfunction(luaState, MetatableFunctions.callNewIndex, "__newindex");
+        Lua.settable(luaState, metatableIndex);
+        
+        Lua.pushstring(luaState, '__call'); // called when table is invoked as function
+        Lua.pushcfunction(luaState, MetatableFunctions.callMetatableCall, "__call");
+        Lua.settable(luaState, metatableIndex);
 
-		Lua.pushstring(luaState, '__gc'); //This is a function in the metatable that is called when you call a function inside the table.
-		Lua.pushcfunction(luaState, MetatableFunctions.callGarbageCollect);
-		Lua.settable(luaState, metatableIndex);
+        Lua.pushstring(luaState, '__gc'); // called on garbage collection
+        Lua.pushcfunction(luaState, MetatableFunctions.callGarbageCollect, "__gc");
+        Lua.settable(luaState, metatableIndex);
 
 		Lua.setmetatable(luaState, tableIndex);
 
@@ -93,9 +95,9 @@ class LScript {
 		final enumMetatableIndex = Lua.gettop(luaState); //The variable position of the table. Used for setting the functions inside this metatable.
 		Lua.pushvalue(luaState, enumMetatableIndex);
 
-		Lua.pushstring(luaState, '__index'); //This is a function in the metatable that is called when you to get a var that doesn't exist.
-		Lua.pushcfunction(luaState, MetatableFunctions.callEnumIndex);
-		Lua.settable(luaState, enumMetatableIndex);
+        Lua.pushstring(luaState, '__index'); // enum field lookup
+        Lua.pushcfunction(luaState, MetatableFunctions.callEnumIndex, "__enum_index");
+        Lua.settable(luaState, enumMetatableIndex);
 
 		specialVars[0] = {"import": (unsafe) ? ClassWorkarounds.importClass : ClassWorkarounds.importClassSafe};
 
@@ -115,15 +117,15 @@ class LScript {
 		createGlobalTable();
 
 		//Adding a suffix to the end of the lua file to attach a metatable to the global vars. (So you don't have to do `script.parent.this`)
-		toParse = preprocessCode(code) + '\nsetmetatable(_G, {
-			__newindex = function (notUsed, name, value)
-				__scriptMetatable.__newindex(script.parent, name, value)
-			end,
-			__index = function (notUsed, name)
-				return __scriptMetatable.__index(script.parent, name)
-			end
-		})';
-	}
+        toParse = preprocessCode(code) + '\nsetmetatable(_G, {
+            __newindex = function (notUsed, name, value)
+                __scriptMetatable.__newindex(script.parent, name, value)
+            end,
+            __index = function (notUsed, name)
+                return __scriptMetatable.__index(script.parent, name)
+            end
+        })';
+    }
 
 	public function execute() {
 		final lastLua:LScript = currentLua;
@@ -164,19 +166,25 @@ class LScript {
 		Sys.println('${tracePrefix}:${line}: ' + s);
 	}
 
-	static inline function scriptTrace(s:String):Int {
-		var info:Lua_Debug = {};
-		Lua.getstack(currentLua.luaState, 1, info);
-		Lua.getinfo(currentLua.luaState, "l", info);
-
-		var toTrace = "";
-		final numParams = Lua.gettop(currentLua.luaState);
-		for (i in 0...(numParams - 1))
-			toTrace += Std.string(CustomConvert.fromLua(-numParams + i));
-
-		currentLua.print(info.currentline, toTrace);
-		return 0;
-	}
+    // Luau-compatible C function that formats print output and routes through Haxe
+    static function printTrace(L:StatePointer):Int {
+        var toTrace = "";
+        final numParams = Lua.gettop(cast L);
+        for (i in 0...numParams) {
+            final s = Lua.tostring(cast L, i + 1);
+            if (s != null) {
+                toTrace += s;
+            } else {
+                // Fallback: convert via CustomConvert for complex values
+                toTrace += Std.string(CustomConvert.fromLua(i + 1));
+            }
+            if (i < numParams - 1) toTrace += "\t";
+        }
+        currentLua.print(-1, toTrace);
+        // Optionally clear args from stack
+        Lua.pop(cast L, numParams);
+        return 0;
+    }
 
 	public function getVar(name:String):Dynamic {
 		var toReturn:Dynamic = null;
