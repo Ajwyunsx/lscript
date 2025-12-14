@@ -5,9 +5,9 @@ import flixel.util.FlxColor;
 import lscript.LScript;
 import lscript.CustomConvert;
 
-import luau.Lua;
-import luau.LuaL;
-import luau.State;
+import llua.Lua;
+import llua.LuaL;
+import llua.State;
 
 import cpp.Callable;
 
@@ -15,7 +15,7 @@ class ClassWorkarounds {
 	/**
 	 * A function made to workaround class constructor functions not appering in class fields.
 	 */
-    public static final workaroundCallable:Callable<luau.State.StatePointer->Int> = Callable.fromStaticFunction(instanceWorkAround);
+	public static final workaroundCallable:Callable<llua.State.StatePointer->Int> = Callable.fromStaticFunction(instanceWorkAround);
 
 	static function instanceWorkAround(state:StatePointer):Int {
 		//Making the params for the function.
@@ -59,7 +59,7 @@ class ClassWorkarounds {
 			final tableIndex = CustomConvert.addToMetatable(importedClass, -1);
 			
 			Lua.pushstring(luaState, "new"); //This implements the work around function to create the class instance.
-            Lua.pushcfunction(luaState, workaroundCallable, "new");
+			Lua.pushcfunction(luaState, workaroundCallable);
 			Lua.rawset(luaState, tableIndex);
 
 			Lua.setglobal(luaState, trimmedName);

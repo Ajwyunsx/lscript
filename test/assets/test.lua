@@ -1,40 +1,53 @@
-script:import("flixel.text.FlxText")
-script:import("flixel.tweens.FlxTween")
-script:import("flixel.tweens.FlxEase")
+-- Luau Script Example with Type Annotations
+-- This demonstrates the modern Lua runtime with optional type safety
 
-local spr
-local angleInc = 5
+local spriteX: number = 640
+local spriteY: number = 360
+local rotationSpeed: number = 100
 
 function create()
-	print("hi! :D")
-	print("woah, ", "multi param.")
-
-	spr = FlxSprite:new()
-	spr:loadGraphic("assets/yes.png")
-	spr.scale:set(2, 2)
-	spr:updateHitbox()
-	spr:screenCenter()
-	script.parent:add(spr)
-
-	local txt = FlxText:new(0, 0, 0, "This text was made with Lua!\nAlong with the sprite in the background.", 24)
-	txt.screenCenter()
-	txt.y = txt.y - 50
-	script.parent.add(txt)
-
-	local function twnFinished() -- MAKE SURE EVERY FUNCTION AND VAR INSIDE FUNCTIONS ARE LOCAL. THIS IS TO WORKAROUND THE _G METATABLE.
-		txt.angle = txt.angle + angleInc;
-
-		if txt.angle >= 30 then
-			angleInc = -5
-		elseif txt.angle <= -30 then
-			angleInc = 5
-		end
-		print("Random Num: "..tostring(giveRandomNum(1, 5)))
-	end
-
-	FlxTween:tween(txt, {y = txt.y + 100}, 0.5, {ease = FlxEase.quadOut, type = 4, onComplete = twnFinished})
+	print("Luau script initialized!")
+	print("Screen dimensions: " .. tostring(getRandomNum(1, 100)))
+	
+	-- Use built-in Lua libraries
+	print("Math operations:")
+	print("sqrt(16) = " .. tostring(math.sqrt(16)))
+	print("max(3, 7) = " .. tostring(math.max(3, 7)))
+	
+	print("String operations:")
+	print("upper('hello') = " .. string.upper("hello"))
+	print("String length: " .. tostring(string.len("Luau")))
+	
+	-- Table operations
+	local myTable = {1, 2, 3, 4, 5}
+	table.insert(myTable, 6)
+	print("Table size after insert: " .. tostring(#myTable))
 end
 
-function update(e)
-	spr.angle = spr.angle + e * 100
+function update(dt: number)
+	-- Update sprite position
+	spriteX = spriteX + dt * 50
+	spriteY = spriteY + dt * 30
+	
+	-- Clamp to screen boundaries
+	if spriteX > 1280 then spriteX = 0 end
+	if spriteY > 720 then spriteY = 0 end
+	
+	-- Optional: call Haxe functions
+	-- setProperty("sprite.x", spriteX)
+	-- setProperty("sprite.y", spriteY)
 end
+
+-- Helper function
+function getRandomNum(min: number, max: number): number
+	return math.floor(math.random() * (max - min + 1)) + min
+end
+
+-- Luau supports type annotations for better performance and safety
+function calculateDistance(x1: number, y1: number, x2: number, y2: number): number
+	local dx = x2 - x1
+	local dy = y2 - y1
+	return math.sqrt(dx * dx + dy * dy)
+end
+
+print("Script loaded successfully!")

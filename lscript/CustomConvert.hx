@@ -4,12 +4,46 @@ import cpp.RawPointer;
 import lscript.LScript;
 import lscript.ClassWorkarounds;
 
-import luau.Lua;
-import luau.LuaL;
-import luau.State;
-import luau.Macro.*;
+import llua.Lua;
+import llua.LuaL;
+import llua.State;
+import llua.Macro.*;
 
 class CustomConvert {
+	/**
+	 * Luau兼容的函数引用存储
+	 */
+	private static function storeLuaFunctionRef(state:State, stackIdx:Int):String {
+		ensureFuncRefTable(state);
+		
+		var funcId = "func_" + (_funcRefCounter++);
+		
+		// 获取 __haxe_func_refs 表
+		Lua.getglobal(state, "__haxe_func_refs");
+		// 压入函数值
+		Lua.pushvalue(state, stackIdx);
+		// 存储：__haxe_func_refs[funcId] = function
+		Lua.setfield(state, -2, funcId);
+		// 弹出表
+		Lua.pop(state, 1);
+		
+		return funcId;
+	}
+
+	private static function ensureFuncRefTable(state:State):Void {
+		Lua.getglobal(state, "__haxe_func_refs");
+		if (Lua.type(state, -1) != Lua.LUA_TTABLE) {
+			Lua.pop(state, 1);
+			Lua.newtable(state);
+			Lua.setglobal(state, "__haxe_func_refs");
+		} else {
+			Lua.pop(state, 1);
+		}
+	}
+
+	// 函数引用计数器
+	private static var _funcRefCounter:Int = 0;
+
 	/**
 	 * Converts a lua variable to haxe. Used for lua function returns.
 	 * @param stackPos The position of the lua variable.
@@ -34,14 +68,19 @@ class CustomConvert {
 			case Lua.LUA_TFUNCTION:
 				if (Lua.tocfunction(luaState, stackPos) != ClassWorkarounds.workaroundCallable) {
 					Lua.pushvalue(luaState, stackPos);
-					final ref = LuaL.ref(luaState, Lua.LUA_REGISTRYINDEX);
+					// 使用 Luau 兼容的函数引用方式
+					final ref = storeLuaFunctionRef(luaState, -1);
 
 					function callLocalLuaFunc(params:Array<Dynamic>) {
 						final lastLua:LScript = LScript.currentLua;
 						LScript.currentLua = curLua;
 
 						Lua.settop(luaState, 0);
-						Lua.rawgeti(luaState, Lua.LUA_REGISTRYINDEX, ref);
+						
+						// Get function from __haxe_func_refs global table
+						Lua.getglobal(luaState, "__haxe_func_refs");
+						Lua.getfield(luaState, -1, ref);
+						Lua.remove(luaState, -2); // Remove table
 				
 						if (!Lua.isfunction(luaState, -1))
 							return null;

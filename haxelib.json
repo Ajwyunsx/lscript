@@ -1,12 +1,14 @@
 {
 	"name": "lscript",
-	"url" : "https://github.com/SrtHero278/lscript",
+	"url" : "https://github.com/Roblox/luau",
 	"license": "MIT",
-	"tags": ["haxe", "lua", "luajit"],
-	"description": "A haxelib using linc_luajit to create object oriented lua! (Original Codebase by YoshiCrafter29)",
-	"version": "0.1.0",
+	"tags": ["haxe", "luau", "lua", "scripting"],
+	"description": "Modern Lua scripting with Luau VM - Object-oriented Lua with Haxe integration",
+	"version": "1.0.0",
 	"classPath": "",
-	"releasenote": "",
-	"contributors": ["SrtHero278"],
-	"dependencies": {}
+	"releasenote": "Full Luau integration with Haxe",
+	"contributors": ["Luau Team", "linc_luajit Contributors"],
+	"dependencies": {
+		"linc_luajit": ""
+	}
 }

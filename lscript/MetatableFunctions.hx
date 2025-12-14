@@ -3,9 +3,9 @@ package lscript;
 import lscript.LScript;
 import lscript.CustomConvert;
 
-import luau.Lua;
-import luau.LuaL;
-import luau.State;
+import llua.Lua;
+import llua.LuaL;
+import llua.State;
 
 import cpp.RawPointer;
 import cpp.Callable;
@@ -33,21 +33,21 @@ class MetatableFunctions {
 	public static final callEnumIndex = Callable.fromStaticFunction(_callEnumIndex);
 
 	//These functions are here because Callable seems like it wants an int return and whines when you do a non static function.
-    static function _callIndex(state:StatePointer):Int {
-        return metatableFunc(LScript.currentLua.luaState, 0);
-    }
-    static function _callNewIndex(state:StatePointer):Int {
-        return metatableFunc(LScript.currentLua.luaState, 1);
-    }
-    static function _callMetatableCall(state:StatePointer):Int {
-        return metatableFunc(LScript.currentLua.luaState, 2);
-    }
-    static function _callGarbageCollect(state:StatePointer):Int {
-        return metatableFunc(LScript.currentLua.luaState, 3);
-    }
-    static function _callEnumIndex(state:StatePointer):Int {
-        return metatableFunc(LScript.currentLua.luaState, 4);
-    }
+	static function _callIndex(state:StatePointer):Int {
+		return metatableFunc(LScript.currentLua.luaState, 0);
+	}
+	static function _callNewIndex(state:StatePointer):Int {
+		return metatableFunc(LScript.currentLua.luaState, 1);
+	}
+	static function _callMetatableCall(state:StatePointer):Int {
+		return metatableFunc(LScript.currentLua.luaState, 2);
+	}
+	static function _callGarbageCollect(state:StatePointer):Int {
+		return metatableFunc(LScript.currentLua.luaState, 3);
+	}
+	static function _callEnumIndex(state:StatePointer):Int {
+		return metatableFunc(LScript.currentLua.luaState, 4);
+	}
 
 	static function metatableFunc(state:State, funcNum:Int) {
 		final functions:Array<Dynamic> = [index, newIndex, metatableCall, garbageCollect, enumIndex];
